@@ -48,8 +48,8 @@ optional arguments:
 
 You can either process one XML report or merge multiple JSON reports:
 ```sh
-python coverage.py --process clover.xml --repo my-repo --output report.json
-python coverage.py --merge json-reports-dir --repo my-repo --output merged.json
+python3 coverage.py --process clover.xml --repo my-repo --output report.json
+python3 coverage.py --merge json-reports-dir --repo my-repo --output merged.json
 ```
 
 ## Upload Coverage to Code Climate
