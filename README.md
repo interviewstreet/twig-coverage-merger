@@ -30,20 +30,27 @@ new Twig_Environment(
 ## Generate Coverage JSON
 The `coverage.py` file generates the report:
 ```
+usage: coverage.py [-h] [-v] [-p clover.xml] [-m json-reports-dir] -r my-repo
+                   [-o report.json]
+
+optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         increase output verbosity
   -p clover.xml, --process clover.xml
-                        geneare JSON report from one clover xml
-  -m coverage-dir, --merge coverage-dir
-                        geneare JSON report from multiple clover xml
+                        generate JSON report from clover xml
+  -m json-reports-dir, --merge json-reports-dir
+                        merge multiple JSON reports
+  -r my-repo, --repo my-repo
+                        repository name to trim the path prefix
   -o report.json, --output report.json
                         output file name
 ```
 
-You can either process one XML report or merger multiple XML reports:
+You can either process one XML report or merge multiple JSON reports:
 ```sh
-python coverage.py --process clover.xml --output report.json
-python coverage.py --merge coverage-dir --output report.json
+python coverage.py --process clover.xml --repo my-repo --output report.json
+python coverage.py --merge json-reports-dir --repo my-repo --output merged.json
 ```
+
 ## Upload Coverage to Code Climate
-The JSON file format is compatible with Code Climate, so you can use `./cc-test-reporter upload-coverage` to send the coverage report.
+The JSON report is compatible with Code Climate, so you can use `./cc-test-reporter upload-coverage` to send the coverage report.
