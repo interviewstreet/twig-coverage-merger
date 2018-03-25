@@ -38,7 +38,7 @@ def ci_env_git_info(repo):
     if ci_service['branch'] == 'HEAD':
         pull_req_sha = exec_cmd(['git', 'log', '-2', '--pretty=format:%H']).split()[-1]
 
-        ci_service['branch'] = ci_service['commit_sha'] = pull_req_sha
+        ci_service['branch'] = pull_req_sha
 
     environment = {
         'pwd': pwd,
