@@ -27,6 +27,13 @@ new Twig_Environment(
 </logging>
 ```
 
+## Dependency
+The `coverage.py` file requires python3. The following two packages should be installed:
+```sh
+sudo pip3 install bs4
+CFLAGS="-O0" sudo pip3 install lxml
+```
+
 ## Generate Coverage JSON
 The `coverage.py` file generates the report:
 ```
@@ -53,4 +60,25 @@ python3 coverage.py --merge json-reports-dir --repo my-repo --output merged.json
 ```
 
 ## Upload Coverage to Code Climate
-The JSON report is compatible with Code Climate, so you can use `./cc-test-reporter upload-coverage` to send the coverage report.
+The JSON report is compatible with Code Climate, so you can use `./cc-test-reporter upload-coverage` to send the coverage report. The JSON includes the following additional sufficient information:
+
+```json
+ci_service = {
+    "branch": "my-branch",
+    "commit_sha": "123c1d47624ee7475b93728ea8e30c8bf1d0ef8d",
+    "committed_at": 1521936646
+}
+```
+```json
+environment = {
+    "pwd": "a/b/c/d/my-repo/e/g",
+    "prefix": "a/b/c/d/my-repo"
+}
+```
+```json
+git = {
+    "branch": "my-branch",
+    "head": "123c1d47624ee7475b93728ea8e30c8bf1d0ef8d",
+    "committed_at": 1521936646
+}
+```
