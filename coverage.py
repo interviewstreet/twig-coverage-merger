@@ -35,6 +35,11 @@ def ci_env_git_info(repo):
         'committed_at': int(exec_cmd(['git', 'log', '-1', '--pretty=format:%ct']))
     }
 
+    if ci_service['branch'] == 'HEAD':
+        pull_req_sha = exec_cmd(['git', 'log', '-2', '--pretty=format:%H']).split()[-1]
+
+        ci_service['branch'] = ci_service['commit_sha'] = pull_req_sha
+
     environment = {
         'pwd': pwd,
         'prefix': prefix_dir
@@ -43,7 +48,7 @@ def ci_env_git_info(repo):
     git = {
         'branch': ci_service['branch'],
         'head': ci_service['commit_sha'],
-        'committed_at': ci_service['commit_sha']
+        'committed_at': ci_service['committed_at']
     }
 
     return ci_service, environment, git
@@ -387,7 +392,8 @@ if __name__ == '__main__':
 
     ci, env, git = ci_env_git_info(args.repo)
 
-    if args.process:
-        process(args.process, args.output, args.repo, ci, env, git, args.verbose)
-    else:
-        merge(args.merge, args.output, args.repo, ci, env, git, args.verbose)
+    if ci or env or git:
+        if args.process:
+            process(args.process, args.output, args.repo, ci, env, git, args.verbose)
+        else:
+            merge(args.merge, args.output, args.repo, ci, env, git, args.verbose)
