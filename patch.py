@@ -112,6 +112,9 @@ def create_patch(reporter, repo, file, output_file):
 
             return file
 
+        if not (reporter.startswith('~/') or reporter.startswith('./')):
+            reporter = './' + reporter
+
         if shutil.which(reporter) is not None:
             status = exec_cmd('chmod +x {}'.format(reporter))
             if status is not None:
