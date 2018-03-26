@@ -1,57 +1,9 @@
 from argparse import ArgumentParser
 from bs4 import BeautifulSoup
-from collections import defaultdict
 from hashlib import sha1
 from json import dump, loads
 from pathlib import Path
 import re
-import subprocess
-
-
-def exec_cmd(cmd):
-    try:
-        return subprocess.check_output(cmd).strip().decode('ascii')
-    except:
-        return ''
-
-
-def ci_env_git_info(repo):
-    current_dir = Path.cwd().parts
-    is_absolute = current_dir[0] == '/'
-
-    if repo not in current_dir:
-        print('Make sure to run the command inside the git directory')
-
-        return {}, {}, {}
-
-    prefix_dir = ('/' if is_absolute else './') + \
-        '/'.join(current_dir[1 if is_absolute else 0:current_dir.index(repo) + 1])
-
-    pwd = ('/' if is_absolute else './') + '/'.join(current_dir[1 if is_absolute else 0:])
-
-    ci_service = {
-        'branch': exec_cmd(['git', 'rev-parse', '--abbrev-ref', 'HEAD']),
-        'commit_sha': exec_cmd(['git', 'log', '-1', '--pretty=format:%H']),
-        'committed_at': int(exec_cmd(['git', 'log', '-1', '--pretty=format:%ct']))
-    }
-
-    if ci_service['branch'] == 'HEAD':
-        pull_req_sha = exec_cmd(['git', 'log', '-2', '--pretty=format:%H']).split()[-1]
-
-        ci_service['branch'] = pull_req_sha
-
-    environment = {
-        'pwd': pwd,
-        'prefix': prefix_dir
-    }
-
-    git = {
-        'branch': ci_service['branch'],
-        'head': ci_service['commit_sha'],
-        'committed_at': ci_service['committed_at']
-    }
-
-    return ci_service, environment, git
 
 
 def git_blob_hash(file):
@@ -168,6 +120,9 @@ def process_xml(source_xml, verbose):
 
 def coverage_report(coverage_dict, repo, verbose):
     coverage_json = {
+        'ci_service': {},
+        'environment': {},
+        'git': {},
         'covered_percent': 0,
         'covered_strength': 0,
         'line_counts': {},
@@ -263,7 +218,7 @@ def write_coverage(coverage_json, output_file):
         dump(coverage_json, f, indent=4)
 
 
-def process(file, output_file, repo, ci, env, git, verbose):
+def process(file, output_file, repo, verbose):
     file_path = Path(file)
 
     if file_path.is_file():
@@ -273,10 +228,6 @@ def process(file, output_file, repo, ci, env, git, verbose):
         coverage = process_xml(source_xml, verbose)
         coverage_json = coverage_report(coverage, repo, verbose)
 
-        coverage_json['ci_service'] = ci
-        coverage_json['environment'] = env
-        coverage_json['git'] = git
-
         if verbose:
             print(coverage_json)
 
@@ -285,7 +236,7 @@ def process(file, output_file, repo, ci, env, git, verbose):
         print('File {} not found'.format(file))
 
 
-def merge(reports_dir, output_file, repo, ci, env, git, verbose):
+def merge(reports_dir, output_file, repo, verbose):
     reports_dir = Path(reports_dir)
 
     if reports_dir.exists():
@@ -351,10 +302,6 @@ def merge(reports_dir, output_file, repo, ci, env, git, verbose):
 
         coverage_json = coverage_report(merged_coverage, repo, verbose)
 
-        coverage_json['ci_service'] = ci
-        coverage_json['environment'] = env
-        coverage_json['git'] = git
-
         if verbose:
             print(coverage_json)
 
@@ -366,16 +313,16 @@ def merge(reports_dir, output_file, repo, ci, env, git, verbose):
 def argument_parser():
     parser = ArgumentParser()
 
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="increase output verbosity")
-    parser.add_argument("-p", "--process", metavar='clover.xml',
-                        help="generate JSON report from clover xml")
-    parser.add_argument("-m", "--merge", metavar='json-reports-dir',
-                        help="merge multiple JSON reports")
-    parser.add_argument("-r", "--repo", required=True, metavar='my-repo',
-                        help="repository name to trim the path prefix")
-    parser.add_argument("-o", "--output", metavar='report.json',
-                        default="report.json", help="output file name")
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='increase output verbosity')
+    parser.add_argument('-p', '--process', metavar='clover.xml',
+                        help='generate JSON report from clover xml')
+    parser.add_argument('-m', '--merge', metavar='json-reports-dir',
+                        help='merge multiple JSON reports')
+    parser.add_argument('-r', '--repo', required=True, metavar='my-repo',
+                        help='repository name to trim the path prefix')
+    parser.add_argument('-o', '--output', metavar='report.json',
+                        default='report.json', help='output file name')
 
     return parser
 
@@ -384,16 +331,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not (args.process or args.merge):
-        parser.error("argument -p/--process or -m/--merge required")
+        parser.error('argument -p/--process or -m/--merge required')
 
     if args.process and args.merge:
         parser.error(
-            "arguments -p/--process and -m/--merge can not be used together")
+            'arguments -p/--process and -m/--merge can not be used together')
 
-    ci, env, git = ci_env_git_info(args.repo)
-
-    if ci or env or git:
-        if args.process:
-            process(args.process, args.output, args.repo, ci, env, git, args.verbose)
-        else:
-            merge(args.merge, args.output, args.repo, ci, env, git, args.verbose)
+    if args.process:
+        process(args.process, args.output, args.repo, args.verbose)
+    else:
+        merge(args.merge, args.output, args.repo, args.verbose)

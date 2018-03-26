@@ -28,7 +28,7 @@ new Twig_Environment(
 ```
 
 ## Dependency
-The `coverage.py` file requires python3. The following two packages should be installed:
+`python3` and the following two packages should be installed:
 ```sh
 sudo pip3 install bs4
 CFLAGS="-O0" sudo pip3 install lxml
@@ -60,25 +60,26 @@ python3 coverage.py --merge json-reports-dir --repo my-repo --output merged.json
 ```
 
 ## Upload Coverage to Code Climate
-The JSON report is compatible with Code Climate, so you can use `./cc-test-reporter upload-coverage` to send the coverage report. The JSON includes the following additional sufficient information:
+The `patch.py` file fetches the *ci_service*, *environment*, and *git* objects by executing `.cc-test-reporter format-coverage`:
+```
+usage: patch.py [-h] [-e cc-test-reporter] -r my-repo [-i report.json]
+                [-o codeclimate.json]
 
-```json
-ci_service = {
-    "branch": "my-branch",
-    "commit_sha": "123c1d47624ee7475b93728ea8e30c8bf1d0ef8d",
-    "committed_at": 1521936646
-}
+optional arguments:
+  -h, --help            show this help message and exit
+  -e cc-test-reporter, --exec cc-test-reporter
+                        cc-test-reporter binary
+  -r my-repo, --repo my-repo
+                        repository name to trim the path prefix
+  -i report.json, --input report.json
+                        the JSON report
+  -o codeclimate.json, --output codeclimate.json
+                        output file name
 ```
-```json
-environment = {
-    "pwd": "a/b/c/d/my-repo/e/g",
-    "prefix": "a/b/c/d/my-repo"
-}
+
+You can generate the JSON report compatible with Code Climate:
+```sh
+python3 patch.py --exec cc-test-reporter --repo my-repo --input report.json --output codeclimate.json
 ```
-```json
-git = {
-    "branch": "my-branch",
-    "head": "123c1d47624ee7475b93728ea8e30c8bf1d0ef8d",
-    "committed_at": 1521936646
-}
-```
+
+Now, you can use `./cc-test-reporter upload-coverage` to upload the coverage report.
