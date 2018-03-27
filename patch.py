@@ -1,8 +1,16 @@
-from argparse import ArgumentParser
-from json import dump, loads
+import argparse
+import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+
+
+def is_python_3_6():
+    version = sys.version_info
+    print(version.major, version.minor)
+
+    return version.major >= 3 and version.minor >= 6
 
 
 def exec_cmd(cmd):
@@ -71,14 +79,20 @@ def write_coverage(coverage_json, output_file):
                                    1 if is_absolute else 0:-1])
         output_file_dir = ('/' if is_absolute else './') + output_file_dir
 
-        if not output_file_path.exists():
+        if not Path(output_file_dir).exists():
+            if not is_python_3_6():
+                print(
+                    'At least python 3.6 is required to create non existing directory')
+
+                return None
+
             print('Creating directory {}'.format(output_file_dir))
             Path(output_file_dir).mkdir(parents=True, exist_ok=True)
 
     print('Writing JSON report to file {}'.format(output_file))
 
     with open(output_file, 'w') as f:
-        dump(coverage_json, f, indent=4)
+        json.dump(coverage_json, f, indent=4)
 
 
 def apply_patch(source, patch, output_file):
@@ -87,10 +101,10 @@ def apply_patch(source, patch, output_file):
 
     if source.is_file():
         with source.open() as f:
-            source_json = loads(f.read())
+            source_json = json.loads(f.read())
 
         with patch.open() as f:
-            patch_json = loads(f.read())
+            patch_json = json.loads(f.read())
 
         source_json['ci_service'] = patch_json['ci_service']
         source_json['environment'] = patch_json['environment']
@@ -99,6 +113,7 @@ def apply_patch(source, patch, output_file):
         write_coverage(source_json, output_file)
     else:
         print('File {} not found'.format(source))
+
 
 def create_patch(reporter, repo, file, output_file):
     file_path = Path(file)
@@ -112,7 +127,16 @@ def create_patch(reporter, repo, file, output_file):
 
             return file
 
-        if not (reporter.startswith('~/') or reporter.startswith('./')):
+        if reporter.startswith('~/'):
+            if not is_python_3_6():
+                print(
+                    'At least python 3.6 is required otherwise provide path without ~/')
+
+                return file
+
+            reporter = str(Path(reporter).expanduser())
+
+        if not reporter.startswith('/'):
             reporter = './' + reporter
 
         if shutil.which(reporter) is not None:
@@ -127,7 +151,8 @@ def create_patch(reporter, repo, file, output_file):
                             '<coverage><project><file name="{}"></file></project></coverage>'.format(tmp_xml))
 
                     coverage_patch = '/tmp/{}.json'.format(tm)
-                    status = exec_cmd('{} format-coverage --input-type clover --output {} {}'.format(reporter, coverage_patch, tmp_xml))
+                    status = exec_cmd(
+                        '{} format-coverage --input-type clover --output {} {}'.format(reporter, coverage_patch, tmp_xml))
 
                     if Path(coverage_patch).exists():
                         return coverage_patch
@@ -143,7 +168,7 @@ def create_patch(reporter, repo, file, output_file):
 
 
 def argument_parser():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     parser.add_argument('-e', '--exec', metavar='cc-test-reporter',
                         default='cc-test-reporter', help='cc-test-reporter binary')
@@ -160,5 +185,6 @@ if __name__ == '__main__':
     parser = argument_parser()
     args = parser.parse_args()
 
-    coverage_patch = create_patch(args.exec, args.repo, args.input, args.output)
+    coverage_patch = create_patch(
+        args.exec, args.repo, args.input, args.output)
     apply_patch(args.input, coverage_patch, args.output)

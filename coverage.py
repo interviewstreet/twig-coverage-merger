@@ -1,9 +1,15 @@
-from argparse import ArgumentParser
+import argparse
 from bs4 import BeautifulSoup
-from hashlib import sha1
-from json import dump, loads
+import json
 from pathlib import Path
 import re
+import sys
+
+
+def is_python_3_6():
+    version = sys.version_info
+
+    return version.major >= 3 and version.minor >= 6
 
 
 def git_blob_hash(file):
@@ -15,7 +21,7 @@ def git_blob_hash(file):
 
     data = b'blob ' + str(len(data)).encode() + b'\0' + data
 
-    h = sha1()
+    h = hashlib.sha1()
     h.update(data)
 
     return h.hexdigest()
@@ -162,8 +168,8 @@ def coverage_report(coverage_dict, repo, verbose):
             strength += val
             coverage_strength += val
 
-        source_file['covered_percent'] = (covered / total) * 100
-        source_file['covered_strength'] = strength / total
+        source_file['covered_percent'] = 0 if not total else (covered / total) * 100
+        source_file['covered_strength'] = 0 if not total else strength / total
 
         source_file['line_counts'] = {
             'total': total,
@@ -184,9 +190,9 @@ def coverage_report(coverage_dict, repo, verbose):
 
         coverage_json['source_files'].append(source_file)
 
-    coverage_json['covered_percent'] = (
+    coverage_json['covered_percent'] = 0 if not coverage_total else (
         coverage_covered / coverage_total) * 100
-    coverage_json['covered_strength'] = int(coverage_strength / coverage_total)
+    coverage_json['covered_strength'] = 0 if not coverage_total else int(coverage_strength / coverage_total)
 
     coverage_json['line_counts'] = {
         'total': coverage_total,
@@ -208,14 +214,20 @@ def write_coverage(coverage_json, output_file):
                                    1 if is_absolute else 0:-1])
         output_file_dir = ('/' if is_absolute else './') + output_file_dir
 
-        if not output_file_path.exists():
+        if not Path(output_file_dir).exists():
+            if not is_python_3_6():
+                print(
+                    'At least python 3.6 is required to create non existing directory')
+
+                return None
+
             print('Creating directory {}'.format(output_file_dir))
             Path(output_file_dir).mkdir(parents=True, exist_ok=True)
 
     print('Writing JSON report to file {}'.format(output_file))
 
     with open(output_file, 'w') as f:
-        dump(coverage_json, f, indent=4)
+        json.dump(coverage_json, f, indent=4)
 
 
 def process(file, output_file, repo, verbose):
@@ -251,7 +263,7 @@ def merge(reports_dir, output_file, repo, verbose):
         merged_coverage = {}
 
         with reports[0].open() as f:
-            for file_coverage in loads(f.read())['source_files']:
+            for file_coverage in json.loads(f.read())['source_files']:
                 merged_coverage[file_coverage['name']] = {
                     'blob_id': file_coverage['blob_id'],
                     'coverage': [-1 if x == 'null' else int(x) for x in file_coverage['coverage'][1:-1].split(',')],
@@ -259,7 +271,7 @@ def merge(reports_dir, output_file, repo, verbose):
 
         for i in range(1, len(reports)):
             with reports[i].open() as f:
-                for file_coverage in loads(f.read())['source_files']:
+                for file_coverage in json.loads(f.read())['source_files']:
                     blob_id = file_coverage['blob_id']
                     new_coverage = [-1 if x == 'null' else int(x) for x in file_coverage[
                         'coverage'][1:-1].split(',')]
@@ -311,7 +323,7 @@ def merge(reports_dir, output_file, repo, verbose):
 
 
 def argument_parser():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='increase output verbosity')
