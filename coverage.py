@@ -1,5 +1,6 @@
 import argparse
 from bs4 import BeautifulSoup
+import hashlib
 import json
 from pathlib import Path
 import re
