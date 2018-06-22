@@ -99,7 +99,8 @@ def process_xml(source_xml, verbose):
                 attr = line.attrs
                 num, count = int(attr['num']), int(attr['count'])
 
-                coverage[num - 1] = count
+                if attr['type'] == 'stmt':
+                    coverage[num - 1] = count
 
             temp_coverage[name] = coverage
 
